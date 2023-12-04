@@ -25,6 +25,9 @@ spring:
 
 logging.level:
   org.hibernate.SQL: debug
+  org.hibernate.type: trace
+#  물음표 확인 용
+
 
 
 
