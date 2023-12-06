@@ -6,6 +6,10 @@ import com.example.querydsl.domain.QMember;
 import com.example.querydsl.domain.Team;
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.Tuple;
+import com.querydsl.core.types.Expression;
+import com.querydsl.core.types.dsl.CaseBuilder;
+import com.querydsl.core.types.dsl.Expressions;
+import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
@@ -20,6 +24,7 @@ import java.util.List;
 
 import static com.example.querydsl.domain.QMember.*;
 import static com.example.querydsl.domain.QTeam.*;
+import static com.querydsl.jpa.JPAExpressions.*;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
@@ -533,6 +538,194 @@ public class QuerydslBasicTest {
         // 패치 조인을 적용을 안했으니 로딩이 되면 안됨
         boolean loaded = emf.getPersistenceUnitUtil().isLoaded(findMember.getTeam());
         assertThat(loaded).as("패치 조인 미적용").isTrue();
-
     }
+
+    /**
+     * 서브 쿼리
+     * 나이가 가장 많은 회원 조회
+     */
+    @Test
+    public void subQuery() throws Exception {
+
+        // 서브 쿼리에서는 외부와 내부의 alias가 달라야한다.
+        // Q객제를 새로 선언하여 alias 처럼 대체하자
+        QMember memberSub = new QMember("memberSub");
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.eq(
+                        select(memberSub.age.max())
+                                .from(memberSub)
+                ))
+                .fetch();
+        // member table 에서 조회할 것이다.
+        // 조건은 member의 최대 나이와 같은 나이의 member를 조회
+
+        assertThat(result)
+                .extracting("age")
+                .containsExactly(40);
+    }
+
+    /**
+     * 서브 쿼리
+     * 나이가 평균 이상인 회원
+     */
+    @Test
+    public void subQueryGoe() throws Exception {
+
+        QMember memberSub = new QMember("memberSub");
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.goe(
+                        select(memberSub.age.avg())
+                                .from(memberSub)
+                        ))
+                .fetch();
+        // member table 에서 조회할 것이다.
+        // 조건은 member의 최대 나이와 같은 나이의 member를 조회
+
+        assertThat(result)
+                .extracting("age")
+                .containsExactly(30, 40);
+    }
+
+    /**
+     * 서브 쿼리 in (가장 중요한)
+     * 나이가 10살 초과인 맴버 (억지성 예제라 참고용)
+     */
+    @Test
+    public void subQueryIn() throws Exception {
+
+        QMember memberSub = new QMember("memberSub");
+
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .where(member.age.in(
+                        select(memberSub.age)
+                                .from(memberSub)
+                                .where(memberSub.age.gt(10))
+                ))
+                .fetch();
+        // member table 에서 조회할 것이다.
+        // 조건은 member의 최대 나이와 같은 나이의 member를 조회
+
+        assertThat(result)
+                .extracting("age")
+                .containsExactly(20,30,40);
+    }
+
+
+    /**
+     * select 서브 쿼리
+     * 맴버 이름을 뽑고 평균 나이도 뽑는다.
+     *
+     * (서브 쿼리 from 절에서는 안됨)
+     * JPQL의 한계 (querydsl도 마찬가지)
+     * 서브쿼리를 join으로 변경한다. 불가능한 상황도 있다.
+     * 애플리케이션에서 쿼리를 2번 분리해서 실행한다.
+     * nativeSQL을 사용한다.
+     *
+     * from 절안에 from 절안에 from 절안에 from 절 ?
+     * 쿼리에서만 풀려고 하지는 말자
+     * DB에서 데이터를 퍼올리는 용도로만 이용하자 (gruopby 이런거를 일단 잘쓰자)
+     *
+     */
+    @Test
+    public void selectSubQuery() throws Exception {
+
+        QMember memberSub = new QMember("memberSub");
+
+        List<Tuple> result = queryFactory
+                .select(member.username,
+                        select(memberSub.age.avg())
+                                .from(memberSub))
+                .from(member)
+                .fetch();
+//        결과 ->
+//        tuple = [member1, 25.0]
+//        tuple = [member2, 25.0]
+//        tuple = [member3, 25.0]
+//        tuple = [member4, 25.0]
+
+        // member table 에서 조회할 것이다.
+        // 조건은 member의 최대 나이와 같은 나이의 member를 조회
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    /**
+     * case
+     */
+    @Test
+    public void basicCase() throws Exception {
+        List<String> result = queryFactory
+                .select(member.age
+                        .when(10).then("열살")
+                        .when(20).then("스무살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+    /**
+     * CaseBuilder
+     */
+    @Test
+    public void complexCase() throws Exception {
+        List<String> result = queryFactory
+                .select(new CaseBuilder()
+                        .when(member.age.between(0, 20)).then("0에서 20살")
+                        .when(member.age.between(21, 30)).then("21살에서 30살")
+                        .otherwise("기타"))
+                .from(member)
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+
+        }
+    }
+
+    /**
+     * 상수 더하기
+     */
+    @Test
+    public void constant() throws Exception {
+        //given
+        List<Tuple> result = queryFactory
+                .select(member.username,
+                        Expressions.constant("A"))
+                .from(member)
+                .fetch();
+
+        for (Tuple tuple : result) {
+            System.out.println("tuple = " + tuple);
+        }
+    }
+
+    /**
+     * 문자 더하기
+     * username_age 하는 법
+     */
+    @Test
+    public void concat() throws Exception {
+
+        List<String> result = queryFactory
+                .select(member.username.concat("_").concat(member.age.stringValue())) // 이 방법은 enum을 처리 할 때 자주 쓰인다
+                .from(member)
+                .where(member.username.eq("member1"))
+                .fetch();
+
+        for (String s : result) {
+            System.out.println("s = " + s);
+
+        }
+    }
+
 }
