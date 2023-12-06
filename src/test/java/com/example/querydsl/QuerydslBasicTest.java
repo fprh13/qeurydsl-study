@@ -3,8 +3,10 @@ package com.example.querydsl;
 
 import com.example.querydsl.domain.Member;
 import com.example.querydsl.domain.QMember;
+import com.example.querydsl.domain.QTeam;
 import com.example.querydsl.domain.Team;
 import com.querydsl.core.QueryResults;
+import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;
 import org.assertj.core.api.Assertions;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 import static com.example.querydsl.domain.QMember.*;
+import static com.example.querydsl.domain.QTeam.*;
 import static org.assertj.core.api.Assertions.*;
 
 @SpringBootTest
@@ -247,6 +250,67 @@ public class QuerydslBasicTest {
         assertThat(results.getLimit()).isEqualTo(2);
         assertThat(results.getOffset()).isEqualTo(1);
         assertThat(results.getResults().size()).isEqualTo(2);
+    }
+
+    /**
+     * 집합
+     * Tuple : querydsl 에서 제공되는 튜플
+     * 여러개의 타입을 가지고 있으니 꺼내는 방식을 알아야한다.
+     * 데이터 타입이 여러개 들어올 때 사용할 때 이용하지만
+     * 실무에서는 거의 사용을 안한다.
+     * DTO로 조회하는 방식을 많이 씀
+     */
+    @Test
+    public void aggregation() throws Exception {
+        //given
+        List<Tuple> result = queryFactory
+                .select(
+                        member.count(),
+                        member.age.sum(),
+                        member.age.avg(),
+                        member.age.max(),
+                        member.age.min()
+                )
+                .from(member)
+                .fetch();
+        //when
+        Tuple tuple = result.get(0);
+
+        //then
+        assertThat(tuple.get(member.count())).isEqualTo(4);
+        assertThat(tuple.get(member.age.sum())).isEqualTo(100);
+        assertThat(tuple.get(member.age.avg())).isEqualTo(25);
+        assertThat(tuple.get(member.age.max())).isEqualTo(40);
+        assertThat(tuple.get(member.age.min())).isEqualTo(10);
+    }
+
+
+    /**
+     * GroupBy
+     * 팀의 이름과 각 팀의 평균 연령을 구해라.
+     */
+    @Test
+    public void group() throws Exception {
+        //given
+        List<Tuple> result = queryFactory
+                .select(team.name, member.age.avg())
+                .from(member)
+                .join(member.team, team)
+                .groupBy(team.name)
+//                .having(item.price.gt(3000)) // having 도 가능 (1000원 넘는 것 조회)
+                .fetch();
+        //when
+        Tuple teamA = result.get(0);
+        Tuple teamB = result.get(1);
+
+        //then
+        assertThat(teamA.get(team.name)).isEqualTo("teamA");
+        assertThat(teamA.get(member.age.avg())).isEqualTo(15); // (10 + 20) / 2
+
+        assertThat(teamB.get(team.name)).isEqualTo("teamB");
+        assertThat(teamB.get(member.age.avg())).isEqualTo(35); // (30 + 40) / 2
+
+        System.out.println(result);
     }
 
 
