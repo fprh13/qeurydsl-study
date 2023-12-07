@@ -19,6 +19,7 @@ import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import jakarta.persistence.Column;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.PersistenceUnit;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.Commit;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Iterator;
@@ -59,11 +61,11 @@ public class QuerydslBasicTest {
         em.persist(teamA);
         em.persist(teamB);
 
-        Member member1 = new Member("member1",10,teamA);
-        Member member2 = new Member("member2",20,teamA);
+        Member member1 = new Member("member1", 10, teamA);
+        Member member2 = new Member("member2", 20, teamA);
 
-        Member member3 = new Member("member3",30,teamB);
-        Member member4 = new Member("member4",40,teamB);
+        Member member3 = new Member("member3", 30, teamB);
+        Member member4 = new Member("member4", 40, teamB);
         em.persist(member1);
         em.persist(member2);
         em.persist(member3);
@@ -209,9 +211,9 @@ public class QuerydslBasicTest {
     @Test
     public void sort() throws Exception {
         //given
-        em.persist(new Member(null,100));
-        em.persist(new Member("member5",100));
-        em.persist(new Member("member6",100));
+        em.persist(new Member(null, 100));
+        em.persist(new Member("member5", 100));
+        em.persist(new Member("member6", 100));
 
         //when
         List<Member> result = queryFactory
@@ -348,7 +350,7 @@ public class QuerydslBasicTest {
                 // username 속성에
                 .extracting("username")
                 // member 1,2 가 구성되어 있는지
-                .containsExactly("member1","member2");
+                .containsExactly("member1", "member2");
     }
 
     /**
@@ -378,7 +380,7 @@ public class QuerydslBasicTest {
         //then
         assertThat(result)
                 .extracting("username")
-                .containsExactly("teamA","teamB");
+                .containsExactly("teamA", "teamB");
     }
 
     /**
@@ -400,7 +402,7 @@ public class QuerydslBasicTest {
 //        tuple = [Member(id=2, username=member2, age=20), Team(id=1, name=teamA)]
 //        tuple = [Member(id=3, username=member3, age=30), null]
 //        tuple = [Member(id=4, username=member4, age=40), null]
-        for (Tuple tuple: result) {
+        for (Tuple tuple : result) {
             System.out.println("tuple = " + tuple);
         }
     }
@@ -421,7 +423,7 @@ public class QuerydslBasicTest {
 //        tuple = [Member(id=2, username=member2, age=20), Team(id=1, name=teamA)]
 //        tuple = [null, Team(id=2, name=teamB)]
 
-        for (Tuple tuple: result) {
+        for (Tuple tuple : result) {
             System.out.println("tuple = " + tuple);
         }
     }
@@ -444,7 +446,7 @@ public class QuerydslBasicTest {
 //        tuple = [Member(id=1, username=member1, age=10), Team(id=1, name=teamA)]
 //        tuple = [Member(id=2, username=member2, age=20), Team(id=1, name=teamA)]
 
-        for (Tuple tuple: result) {
+        for (Tuple tuple : result) {
             System.out.println("tuple = " + tuple);
         }
     }
@@ -466,7 +468,7 @@ public class QuerydslBasicTest {
 //        tuple = [Member(id=1, username=member1, age=10), Team(id=1, name=teamA)]
 //        tuple = [Member(id=2, username=member2, age=20), Team(id=1, name=teamA)]
 
-        for (Tuple tuple: result) {
+        for (Tuple tuple : result) {
             System.out.println("tuple = " + tuple);
         }
     }
@@ -590,7 +592,7 @@ public class QuerydslBasicTest {
                 .where(member.age.goe(
                         select(memberSub.age.avg())
                                 .from(memberSub)
-                        ))
+                ))
                 .fetch();
         // member table 에서 조회할 것이다.
         // 조건은 member의 최대 나이와 같은 나이의 member를 조회
@@ -622,24 +624,23 @@ public class QuerydslBasicTest {
 
         assertThat(result)
                 .extracting("age")
-                .containsExactly(20,30,40);
+                .containsExactly(20, 30, 40);
     }
 
 
     /**
      * select 서브 쿼리
      * 맴버 이름을 뽑고 평균 나이도 뽑는다.
-     *
+     * <p>
      * (서브 쿼리 from 절에서는 안됨)
      * JPQL의 한계 (querydsl도 마찬가지)
      * 서브쿼리를 join으로 변경한다. 불가능한 상황도 있다.
      * 애플리케이션에서 쿼리를 2번 분리해서 실행한다.
      * nativeSQL을 사용한다.
-     *
+     * <p>
      * from 절안에 from 절안에 from 절안에 from 절 ?
      * 쿼리에서만 풀려고 하지는 말자
      * DB에서 데이터를 퍼올리는 용도로만 이용하자 (gruopby 이런거를 일단 잘쓰자)
-     *
      */
     @Test
     public void selectSubQuery() throws Exception {
@@ -742,7 +743,7 @@ public class QuerydslBasicTest {
      * 프로젝션 : select 대상 지정
      * 프로젝션 대상이 하나
      * 대상이 하나면 타입을 명확하게 지정할 수 있음
-     *
+     * <p>
      * 대상이 둘이상이라면 튜플이나 DTO로 조회
      */
     @Test
@@ -872,13 +873,13 @@ public class QuerydslBasicTest {
 
     /**
      * 필드 직접 접근 가능 (setter 가 없어도 가능)
-     *
+     * <p>
      * member 랑 다르게 userDto의 필드의 이름 부분이 username 이 아닌 name이다
      * 필드가 다르다면 어떻게 해야될까?
      * member.username.as("name")으로 필드 명을 맞춘다.
-     *
+     * <p>
      * ExpressionUtils.as(member.username,"name") 로 해도되지만 지저분 해짐
-     *
+     * <p>
      * 기본 생성자 필요
      */
     @Test
@@ -929,13 +930,13 @@ public class QuerydslBasicTest {
      * Dto의 생성자에 어노테이션을 달아 주자
      * 그 후 querydsl을 다시 컴파일 해줘야한다.
      * Dto 마저 Q파일로 만들어줌
-     *
+     * <p>
      * new QMemberDto 생성자를 선언하기만 하면 된다
-     *
+     * <p>
      * constructor 과 차이는 예를 들어서 member.id 를 추가한다고 했을 때
      * QMemberDto는 컴파일에러를 내준다
      * 하지만 constructor는 실행이 되야 오류가 나는 큰 단점
-     *
+     * <p>
      * 단점 : Q를 만들어줘야한다.
      * 아케텍쳐 의존관계의 문제 -> @QeuryProjection 때문에 Dto 자체가 라이브러리적으로 querydsl 에 의존성을 가지게 된다
      * 갑작스럽게 querydsl을 빼라고 하면 영향이 클 것 이다.
@@ -991,7 +992,7 @@ public class QuerydslBasicTest {
      * where 다중 파라미터 사용
      * 실무에서 가장 좋은 방법
      * 코드가 매우 깔끔함
-     *
+     * <p>
      * 장점: where 조건에 null 값은 무시된다.
      * 메서드를 다른 쿼리에서도 재활용 할 수 있다.
      * 쿼리 자체의 가독성이 높아진다.
@@ -1004,6 +1005,7 @@ public class QuerydslBasicTest {
         List<Member> result = searchMember2(usernameParam, ageParam);
         assertThat(result.size()).isEqualTo(1);
     }
+
     private List<Member> searchMember2(String usernameCond, Integer ageCond) {
         return queryFactory
                 .selectFrom(member)
@@ -1011,12 +1013,15 @@ public class QuerydslBasicTest {
 //                .where(allEq(usernameCond,ageCond))
                 .fetch();
     }
+
     private BooleanExpression usernameEq(String usernameCond) {
         return usernameCond != null ? member.username.eq(usernameCond) : null;
     }
+
     private BooleanExpression ageEq(Integer ageCond) {
         return ageCond != null ? member.age.eq(ageCond) : null;
     }
+
     /**
      * 한방으로 조합 가능 : 조립을 할 수 있는 것이 강점이다.
      */
@@ -1024,4 +1029,132 @@ public class QuerydslBasicTest {
         return usernameEq(usernameCond).and(ageEq(ageCond));
     }
 
+    /**
+     * 수정 삭제 배치 쿼리
+     * <p>
+     * 배치 연산이라고 한다.
+     * <p>
+     * 모든 개발자 연봉 10퍼센트 인상해. 이런 연산들 처리
+     */
+    @Test
+//    @Commit
+    public void bulkUpdate() throws Exception {
+        //member1 = 10 -> DB member1
+        //member2 = 20 -> DB member2
+        //member3 = 30 -> DB member3
+        //member4 = 40 -> DB member4
+
+
+        long count = queryFactory
+                .update(member)
+                .set(member.username, "비회원")
+                .where(member.age.lt(28))
+                .execute();
+        //member1 = 10 -> DB 비회원
+        //member2 = 20 -> DB 비회원
+        //member3 = 30 -> DB member1
+        //member4 = 40 -> DB member1
+
+
+//    영속성 컨텍스트 상태
+        //member1 = 10 -> cash member1
+        //member2 = 20 -> cash member2
+        //member3 = 30 -> cash member3
+        //member4 = 40 -> cash member4
+
+        // 디비에서 조회를 해도 버리고 영속성 컨텍스트 내용을 출력하게 된다.
+        List<Member> result = queryFactory
+                .selectFrom(member)
+                .fetch();
+        for (Member member1 : result) {
+            System.out.println("result = " + member1);
+        }
+
+//        결과 ->
+//        result = Member(id=1, username=member1, age=10)
+//        result = Member(id=2, username=member2, age=20)
+//        result = Member(id=3, username=member3, age=30)
+//        result = Member(id=4, username=member4, age=40)
+
+//        해결 방법 ->
+        em.flush(); // 영속성 컨테스트 내용을 디비로 보내서 싱크를 맞추고
+        em.clear(); // 초기화를 해버린다.
+        List<Member> result2 = queryFactory
+                .selectFrom(member)
+                .fetch();
+        for (Member member1 : result2) {
+            System.out.println("result2 = " + member1);
+        }
+    }
+
+    /**
+     * bulk 더하기
+     */
+    @Test
+    public void bulkAdd() throws Exception {
+        queryFactory
+                .update(member)
+                .set(member.age, member.age.add(1))
+                .execute();
+    }
+
+    /**
+     * bulk 곱하기
+     */
+    @Test
+    public void bulkMultiply() throws Exception {
+        queryFactory
+                .update(member)
+                .set(member.age, member.age.multiply(2))
+                .execute();
+    }
+
+    /**
+     * bulk 삭제
+     */
+    @Test
+    public void bulkDelete() throws Exception {
+        queryFactory
+                .delete(member)
+                .where(member.age.gt(18))
+                .execute();
+    }
+
+    /**
+     * sql function 호출
+     */
+    @Test
+    public void sqlFunction() throws Exception {
+        List<String> result = queryFactory
+                .select(Expressions.stringTemplate(
+                        "function('replace', {0}, {1}, {2})",
+                        member.username, "member", "M"))
+                .from(member)
+                .fetch();
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
+
+    /**
+     * sql function 소문자
+     */
+    @Test
+    public void sqlFunction2() throws Exception {
+
+        Member member5 = new Member("HELLOJAVA5", 40);
+        em.persist(member5);
+
+        List<String> result = queryFactory
+                .select(member.username)
+                .from(member)
+//                .where(member.username.eq(
+//                        Expressions.stringTemplate("function('lower', {0})", member.username)))
+//                .where(member.username.eq(member.username.lower()))
+                .where(member.username.lower().eq("hellojava5"))
+                .fetch();
+        for (String s : result) {
+            System.out.println("s = " + s);
+        }
+    }
 }
