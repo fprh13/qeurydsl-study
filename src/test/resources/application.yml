@@ -4,7 +4,7 @@ server:
 
 spring:
   profiles:
-    active: local
+    active: test
 #    개발 서버는 dev or develop
 #    운영은 real
   mvc:
